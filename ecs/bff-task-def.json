@@ -1,0 +1,40 @@
+{
+  "family": "bff-service",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "containerDefinitions": [
+    {
+      "name": "bff-service",
+      "image": "tanusmita/bff-service:latest",
+      "portMappings": [
+        {
+          "containerPort": 8090,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        { "name": "SPRING_CONFIG_IMPORT", "value": "optional:configserver:http://admin:config123@config-service:8888" },
+        { "name": "EUREKA_CLIENT_SERVICEURL_DEFAULTZONE", "value": "http://discovery-service:8761/eureka" },
+        { "name": "SPRING_PROFILES_ACTIVE", "value": "docker" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/bff-service",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs",
+          "awslogs-create-group": "true"
+        }
+      },
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -sf http://localhost:8090/actuator/health || exit 1"],
+        "interval": 15,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 90
+      }
+    }
+  ]
+}

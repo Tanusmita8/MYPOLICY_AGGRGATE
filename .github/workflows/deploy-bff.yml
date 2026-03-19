@@ -1,0 +1,44 @@
+name: Deploy bff-service
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'MyPolicy-Backend/bff-service/**'
+      - '.github/workflows/deploy-bff.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./MyPolicy-Backend/bff-service
+          push: true
+          tags: |
+            tanusmita/bff-service:latest
+            tanusmita/bff-service:${{ github.sha }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Deploy to ECS
+        run: |
+          aws ecs update-service \
+            --cluster mypolicy-prod \
+            --service bff-service \
+            --force-new-deployment

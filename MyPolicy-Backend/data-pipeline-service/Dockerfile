@@ -19,9 +19,9 @@ COPY --from=build /app/target/*.jar app.jar
 RUN chown spring:spring app.jar
 USER spring:spring
 
-EXPOSE 8761
+EXPOSE 8082
 
-HEALTHCHECK --interval=15s --timeout=5s --start-period=60s --retries=3 \
-  CMD curl -sf http://localhost:8761/actuator/health || exit 1
+HEALTHCHECK --interval=15s --timeout=5s --start-period=90s --retries=3 \
+  CMD curl -sf http://localhost:8082/actuator/health || exit 1
 
 ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]

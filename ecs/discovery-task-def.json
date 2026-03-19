@@ -1,0 +1,39 @@
+{
+  "family": "discovery-service",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "containerDefinitions": [
+    {
+      "name": "discovery-service",
+      "image": "tanusmita/discovery-service:latest",
+      "portMappings": [
+        {
+          "containerPort": 8761,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        { "name": "SPRING_CONFIG_IMPORT", "value": "optional:configserver:http://admin:config123@config-service:8888" },
+        { "name": "SPRING_PROFILES_ACTIVE", "value": "prod" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/discovery-service",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs",
+          "awslogs-create-group": "true"
+        }
+      },
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -sf http://localhost:8761/actuator/health || exit 1"],
+        "interval": 15,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 60
+      }
+    }
+  ]
+}

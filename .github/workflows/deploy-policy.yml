@@ -1,0 +1,44 @@
+name: Deploy policy-service
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'MyPolicy-Backend/policy-service/**'
+      - '.github/workflows/deploy-policy.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./MyPolicy-Backend/policy-service
+          push: true
+          tags: |
+            tanusmita/policy-service:latest
+            tanusmita/policy-service:${{ github.sha }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Deploy to ECS
+        run: |
+          aws ecs update-service \
+            --cluster mypolicy-prod \
+            --service policy-service \
+            --force-new-deployment

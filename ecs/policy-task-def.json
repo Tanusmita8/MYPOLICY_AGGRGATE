@@ -1,0 +1,41 @@
+{
+  "family": "policy-service",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "containerDefinitions": [
+    {
+      "name": "policy-service",
+      "image": "tanusmita/policy-service:latest",
+      "portMappings": [
+        {
+          "containerPort": 8085,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        { "name": "SPRING_CONFIG_IMPORT", "value": "optional:configserver:http://admin:config123@config-service:8888" },
+        { "name": "EUREKA_CLIENT_SERVICEURL_DEFAULTZONE", "value": "http://discovery-service:8761/eureka" },
+        { "name": "SPRING_DATA_MONGODB_URI", "value": "mongodb+srv://praticks2003_db_user:cPZqSJF3LPPsHSEv@cluster0.enwyvnr.mongodb.net/?retryWrites=true&w=majority" },
+        { "name": "SPRING_PROFILES_ACTIVE", "value": "prod" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/policy-service",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs",
+          "awslogs-create-group": "true"
+        }
+      },
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -sf http://localhost:8085/api/v1/health || exit 1"],
+        "interval": 15,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 60
+      }
+    }
+  ]
+}
