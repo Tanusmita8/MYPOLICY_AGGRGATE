@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_picker/image_picker.dart';
-import '../services/bff_api_service.dart';
+import 'package:image_cropper/image_cropper.dart';
 import '../theme/app_theme.dart';
 
 /// Profile screen with a modern two-column banking dashboard layout.
@@ -35,58 +35,46 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   final ImagePicker _picker = ImagePicker();
 
-  // Profile data from BFF
-  bool _isLoading = true;
-  String? _errorMessage;
-  Map<String, dynamic> _profileData = {};
-
-  @override
-  void initState() {
-    super.initState();
-    _loadProfileData();
-  }
-
-  Future<void> _loadProfileData() async {
-    try {
-      setState(() {
-        _isLoading = true;
-        _errorMessage = null;
-      });
-
-      final response = await BffApiService.getProfile(
-        customerId: widget.customerId,
-      );
-
-      if (!mounted) return;
-
-      setState(() {
-        _profileData = response['customer'] as Map<String, dynamic>? ?? {};
-        _isLoading = false;
-      });
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = e.toString().replaceFirst('Exception: ', '');
-        });
-      }
-    }
-  }
-
-  // ── Image picker flow ──────────────
+  // ── Image picker & cropper flow ──────────────
   Future<void> _pickImage() async {
-    // Pick image from gallery
+    // 1. Pick image from gallery
     final XFile? pickedFile = await _picker.pickImage(source: ImageSource.gallery);
     if (pickedFile == null) return;
 
     if (!mounted) return;
 
-    final bytes = await pickedFile.readAsBytes();
-    if (!mounted) return;
+    // 2. Crop the picked image
+    final CroppedFile? croppedFile = await ImageCropper().cropImage(
+      sourcePath: pickedFile.path,
+      compressFormat: ImageCompressFormat.png,
+      compressQuality: 90,
+      uiSettings: [
+        WebUiSettings(
+          context: context,
+          presentStyle: WebPresentStyle.dialog,
+          size: const CropperSize(width: 300, height: 300),
+          viewwMode: WebViewMode.mode_1,
+          dragMode: WebDragMode.crop,
+          initialAspectRatio: 1.0,
+          modal: true,
+          guides: true,
+          center: true,
+          zoomable: true,
+          zoomOnTouch: true,
+          zoomOnWheel: true,
+          cropBoxMovable: true,
+          cropBoxResizable: true,
+        ),
+      ],
+    );
 
-    setState(() {
-      _avatarBytes = bytes;
-    });
+    if (croppedFile != null) {
+      // 3. Read cropped bytes and update state
+      final bytes = await croppedFile.readAsBytes();
+      setState(() {
+        _avatarBytes = bytes;
+      });
+    }
   }
 
   @override
@@ -100,31 +88,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return Scaffold(
           backgroundColor: AppTheme.backgroundGrey,
           // No AppBar — logo is in the left panel
-          body: _isLoading
-              ? const Center(
-                  child: CircularProgressIndicator(),
-                )
-              : _errorMessage != null
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.error_outline, color: Colors.red, size: 48),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Error: $_errorMessage',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(color: Colors.red),
-                          ),
-                          const SizedBox(height: 24),
-                          ElevatedButton(
-                            onPressed: _loadProfileData,
-                            child: const Text('Retry'),
-                          ),
-                        ],
-                      ),
-                    )
-                  : isMobile ? _buildMobileLayout() : _buildDesktopLayout(constraints),
+          body: isMobile ? _buildMobileLayout() : _buildDesktopLayout(constraints),
         );
       },
     );
@@ -288,7 +252,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
           // Customer Name
           Text(
-            _profileData['name'] as String? ?? widget.customerName,
+            widget.customerName,
             style: const TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
@@ -302,7 +266,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
           // Customer ID
           Text(
-            _profileData['customerId'] as String? ?? widget.customerId,
+            widget.customerId,
             style: TextStyle(
               fontSize: 13,
               color: Colors.white.withValues(alpha: 0.7),
@@ -364,9 +328,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           icon: Icons.badge_outlined,
           title: 'Customer Details',
           rows: [
-            _InfoRow('Customer ID', _profileData['customerId'] as String? ?? widget.customerId, copyable: true),
-            _InfoRow('Email ID', _profileData['email'] as String? ?? 'N/A', isObscured: true),
-            _InfoRow('Registered Mobile Number', _profileData['phone'] as String? ?? 'N/A', isObscured: true),
+            _InfoRow('Customer ID', widget.customerId, copyable: true),
+            _InfoRow('Email ID', 'sureshcr7@gmail.com', isObscured: true),
+            _InfoRow('Registered Mobile Number', '+91 9876543210', isObscured: true),
           ],
         ),
         const SizedBox(height: AppTheme.spacing16),
@@ -374,8 +338,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           icon: Icons.person_outline,
           title: 'Personal Information',
           rows: [
-            _InfoRow('Date of Birth', _profileData['dateOfBirth'] as String? ?? 'N/A', isObscured: true),
-            _InfoRow('Gender', _profileData['gender'] as String? ?? 'N/A'),
+            _InfoRow('Date of Birth', '02 March 2003', isObscured: true),
+            _InfoRow('Gender', 'Male'),
           ],
         ),
         const SizedBox(height: AppTheme.spacing16),
@@ -383,8 +347,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           icon: Icons.location_on_outlined,
           title: 'Address Information',
           rows: [
-            _InfoRow('Communication Address', _profileData['communicationAddress'] as String? ?? 'N/A'),
-            _InfoRow('Permanent Address', _profileData['permanentAddress'] as String? ?? 'N/A'),
+            _InfoRow('Communication Address', 'Guwahati, Assam'),
+            _InfoRow('Permanent Address', 'Tihu, Nalbari, Assam'),
           ],
         ),
         const SizedBox(height: AppTheme.spacing16),
@@ -392,9 +356,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           icon: Icons.verified_user_outlined,
           title: 'KYC Details',
           rows: [
-            _InfoRow('PAN', _profileData['pan'] as String? ?? 'N/A', isObscured: true),
-            _InfoRow('Aadhaar', _profileData['aadhaar'] as String? ?? 'N/A', isObscured: true),
-            _InfoRow('KYC Status', _profileData['kycStatus'] as String? ?? 'Pending', isStatus: true),
+            _InfoRow('PAN', 'ALRPU1234A', isObscured: true),
+            _InfoRow('Aadhaar', 'xxxx xxxx 9564', isObscured: true),
+            _InfoRow('KYC Status', 'Verified', isStatus: true),
           ],
         ),
       ],

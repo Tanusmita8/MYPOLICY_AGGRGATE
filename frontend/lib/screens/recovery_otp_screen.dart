@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../services/bff_api_service.dart';
 import '../theme/app_theme.dart';
 
 class RecoveryOtpScreen extends StatefulWidget {
@@ -81,7 +80,7 @@ class _RecoveryOtpScreenState extends State<RecoveryOtpScreen> {
     super.dispose();
   }
 
-  Future<void> _handleVerify() async {
+  void _handleVerify() {
     final otp = _controllers.map((c) => c.text).join();
     if (otp.length < 6) return;
 
@@ -89,52 +88,30 @@ class _RecoveryOtpScreenState extends State<RecoveryOtpScreen> {
       _isLoading = true;
     });
 
-    try {
-      final response = await BffApiService.verifyRecoveryOtp(
-        customerId: widget.customerId,
-        otp: otp,
-      );
-
-      if (!mounted) return;
-
-      if (response['verified'] == true) {
-        _showSuccessDialog();
-      } else {
-        setState(() {
-          _isLoading = false;
-          _attemptsLeft--;
-        });
-        
-        if (_attemptsLeft == 0) {
-          _showFailureDialog('Too many attempts. Your account has been temporarily locked for security.');
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Invalid OTP. $_attemptsLeft attempts remaining.'),
-              backgroundColor: AppTheme.primaryRed,
-            ),
-          );
-        }
-      }
-    } catch (e) {
+    // Mock OTP verification (Correct code is 123456)
+    Future.delayed(const Duration(seconds: 1), () {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _attemptsLeft--;
-        });
-        
-        if (_attemptsLeft <= 0) {
-          _showFailureDialog('Too many attempts. Your account has been temporarily locked for security.');
+        if (otp == '123456') {
+          _showSuccessDialog();
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error: ${e.toString().replaceFirst('Exception: ', '')}'),
-              backgroundColor: AppTheme.primaryRed,
-            ),
-          );
+          setState(() {
+            _isLoading = false;
+            _attemptsLeft--;
+          });
+          
+          if (_attemptsLeft == 0) {
+            _showFailureDialog('Too many attempts. Your account has been temporarily locked for security.');
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Invalid OTP. $_attemptsLeft attempts remaining.'),
+                backgroundColor: AppTheme.primaryRed,
+              ),
+            );
+          }
         }
       }
-    }
+    });
   }
 
   void _showSuccessDialog() {

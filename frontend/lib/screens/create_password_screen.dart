@@ -1,15 +1,8 @@
 import 'package:flutter/material.dart';
-import '../services/bff_api_service.dart';
 import '../theme/app_theme.dart';
-import 'login_screen.dart';
 
 class CreatePasswordScreen extends StatefulWidget {
-  final String customerId;
-
-  const CreatePasswordScreen({
-    super.key,
-    required this.customerId,
-  });
+  const CreatePasswordScreen({super.key});
 
   @override
   State<CreatePasswordScreen> createState() => _CreatePasswordScreenState();
@@ -22,7 +15,6 @@ class _CreatePasswordScreenState extends State<CreatePasswordScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
   bool _isLoading = false;
-  String? _errorMessage;
 
   @override
   void dispose() {
@@ -31,37 +23,17 @@ class _CreatePasswordScreenState extends State<CreatePasswordScreen> {
     super.dispose();
   }
 
-  Future<void> _handleCreateAccount() async {
+  void _handleCreateAccount() {
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;
-        _errorMessage = null;
       });
 
-      try {
-        final response = await BffApiService.createPassword(
-          customerId: widget.customerId,
-          password: _passwordController.text,
-        );
-
-        if (!mounted) return;
-
-        if (response['updated'] == true) {
-          _showSuccessDialog();
-        } else {
-          setState(() {
-            _isLoading = false;
-            _errorMessage = response['message'] as String? ?? 'Failed to create password';
-          });
-        }
-      } catch (e) {
+      Future.delayed(const Duration(seconds: 1), () {
         if (mounted) {
-          setState(() {
-            _isLoading = false;
-            _errorMessage = e.toString().replaceFirst('Exception: ', '');
-          });
+          _showSuccessDialog();
         }
-      }
+      });
     }
   }
 
@@ -92,10 +64,7 @@ class _CreatePasswordScreenState extends State<CreatePasswordScreen> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-                  Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (context) => const LoginScreen()),
-                    (route) => false,
-                  );
+                  Navigator.of(context).popUntil((route) => route.isFirst);
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryBlue,
@@ -200,21 +169,6 @@ class _CreatePasswordScreenState extends State<CreatePasswordScreen> {
                     ),
                     
                     const SizedBox(height: AppTheme.spacing32),
-                    
-                    if (_errorMessage != null) ...[
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.red.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          _errorMessage!,
-                          style: const TextStyle(color: Colors.white, fontSize: 13),
-                        ),
-                      ),
-                      const SizedBox(height: AppTheme.spacing16),
-                    ],
                     
                     SizedBox(
                       width: double.infinity,

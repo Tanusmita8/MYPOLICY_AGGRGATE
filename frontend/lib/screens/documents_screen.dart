@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import '../models/policy_model.dart';
-import '../services/bff_api_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/custom_appbar.dart';
 import '../screens/policy_detail_screen.dart';
 
-class DocumentsScreen extends StatefulWidget {
+class DocumentsScreen extends StatelessWidget {
   final String customerName;
   final String customerId;
 
@@ -16,128 +15,21 @@ class DocumentsScreen extends StatefulWidget {
   });
 
   @override
-  State<DocumentsScreen> createState() => _DocumentsScreenState();
-}
-
-class _DocumentsScreenState extends State<DocumentsScreen> {
-  bool _isLoading = true;
-  String? _errorMessage;
-  List<Policy> _policies = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadDocuments();
-  }
-
-  Future<void> _loadDocuments() async {
-    try {
-      setState(() {
-        _isLoading = true;
-        _errorMessage = null;
-      });
-
-      final response = await BffApiService.getDocuments(
-        customerId: widget.customerId,
-      );
-
-      if (!mounted) return;
-
-      final documents = response;
-      final List<Policy> loadedPolicies = [];
-
-      for (var docData in documents) {
-        final policy = Policy(
-          id: docData['policyId'] as String? ?? '',
-          name: docData['policyNumber'] as String? ?? 'Policy',
-          policyId: docData['policyId'] as String? ?? '',
-          description: docData['type'] as String? ?? '',
-          category: _mapCategory(docData['type'] as String? ?? 'OTHER'),
-          sumInsured: double.tryParse(docData['sumInsured'].toString()) ?? 0.0,
-          annualPremium: double.tryParse(docData['annualPremium'].toString()) ?? 0.0,
-          expiryDate: DateTime.tryParse(docData['endDate'] as String? ?? '') ?? DateTime.now(),
-        );
-        loadedPolicies.add(policy);
-      }
-
-      setState(() {
-        _policies = loadedPolicies;
-        _isLoading = false;
-      });
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = e.toString().replaceFirst('Exception: ', '');
-        });
-      }
-    }
-  }
-
-  PolicyCategory _mapCategory(String type) {
-    switch (type.toUpperCase()) {
-      case 'AUTO':
-        return PolicyCategory.others;
-      case 'HEALTH':
-        return PolicyCategory.health;
-      case 'LIFE':
-        return PolicyCategory.life;
-      default:
-        return PolicyCategory.others;
-    }
-  }
-
-  PolicyStatus _mapStatus(String status) {
-    switch (status.toUpperCase()) {
-      case 'ACTIVE':
-        return PolicyStatus.active;
-      case 'DUE':
-        return PolicyStatus.due;
-      case 'EXPIRED':
-        return PolicyStatus.expired;
-      case 'EXPIRING_SOON':
-        return PolicyStatus.expiringsoon;
-      default:
-        return PolicyStatus.active;
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
+    // Fetch all sample policies for the user
+    final List<Policy> policies = PolicyData.getSamplePolicies();
+
     return Scaffold(
       backgroundColor: AppTheme.backgroundGrey,
       appBar: CustomAppBar(
-        customerName: widget.customerName,
-        customerId: widget.customerId,
+        customerName: customerName,
+        customerId: customerId,
+        showBackButton: true,
         onLogoTap: () {
           Navigator.of(context).popUntil((route) => route.isFirst);
         },
       ),
-      body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(),
-            )
-          : _errorMessage != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.error_outline, color: Colors.red, size: 48),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Error: $_errorMessage',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.red),
-                      ),
-                      const SizedBox(height: 24),
-                      ElevatedButton(
-                        onPressed: _loadDocuments,
-                        child: const Text('Retry'),
-                      ),
-                    ],
-                  ),
-                )
-              : SingleChildScrollView(
+      body: SingleChildScrollView(
         child: Center(
           child: Container(
             constraints: const BoxConstraints(maxWidth: 800),
@@ -145,22 +37,13 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Documents & Certificates',
-                      style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 28,
-                            color: AppTheme.textDark,
-                          ),
-                    ),
-                  ],
+                Text(
+                  'Documents & Certificates',
+                  style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 28,
+                        color: AppTheme.textDark,
+                      ),
                 ),
                 const SizedBox(height: AppTheme.spacing8),
                 Text(
@@ -171,31 +54,20 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                       ),
                 ),
                 const SizedBox(height: AppTheme.spacing32),
-                if (_policies.isEmpty)
-                  Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppTheme.spacing32),
-                      child: Text(
-                        'No documents available',
-                        style: Theme.of(context).textTheme.bodyLarge,
-                      ),
-                    ),
-                  )
-                else
-                  ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _policies.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: AppTheme.spacing16),
-                    itemBuilder: (context, index) {
-                      final policy = _policies[index];
-                      return _DocumentCard(
-                        policy: policy,
-                        customerName: widget.customerName,
-                        customerId: widget.customerId,
-                      );
-                    },
-                  ),
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: policies.length,
+                  separatorBuilder: (context, index) => const SizedBox(height: AppTheme.spacing16),
+                  itemBuilder: (context, index) {
+                    final policy = policies[index];
+                    return _DocumentCard(
+                      policy: policy,
+                      customerName: customerName,
+                      customerId: customerId,
+                    );
+                  },
+                ),
               ],
             ),
           ),

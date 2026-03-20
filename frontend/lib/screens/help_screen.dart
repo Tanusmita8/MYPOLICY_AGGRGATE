@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../services/bff_api_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/custom_appbar.dart';
 import '../widgets/help_card.dart';
@@ -28,76 +27,10 @@ class _HelpScreenState extends State<HelpScreen> {
   static const Color _greenIcon = Color(0xFF16A34A);
   static const Color _orangeIcon = Color(0xFFF59E0B);
 
-  bool _isLoading = true;
-  String? _errorMessage;
-  List<Map<String, dynamic>> _helpActions = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadHelpActions();
-  }
-
-  Future<void> _loadHelpActions() async {
-    try {
-      setState(() {
-        _isLoading = true;
-        _errorMessage = null;
-      });
-
-      final response = await BffApiService.getHelpActions(
-        customerId: widget.customerId,
-      );
-
-      if (!mounted) return;
-
-      final actions = response['helpActions'] as List<dynamic>? ?? [];
-      setState(() {
-        _helpActions = actions.cast<Map<String, dynamic>>();
-        _isLoading = false;
-      });
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = e.toString().replaceFirst('Exception: ', '');
-        });
-      }
-    }
-  }
-
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
-  }
-
-  IconData _getIconForAction(String? actionType) {
-    switch (actionType?.toLowerCase()) {
-      case 'faq':
-        return Icons.menu_book;
-      case 'document':
-        return Icons.description;
-      case 'claim':
-        return Icons.fact_check;
-      case 'payment':
-        return Icons.credit_card;
-      case 'support':
-        return Icons.chat;
-      default:
-        return Icons.help_outline;
-    }
-  }
-
-  Color _getColorForAction(String? actionType) {
-    switch (actionType?.toLowerCase()) {
-      case 'claim':
-        return _orangeIcon;
-      case 'payment':
-        return _greenIcon;
-      default:
-        return _blueIcon;
-    }
   }
 
   void _onCardTap(String action) {
@@ -141,35 +74,12 @@ class _HelpScreenState extends State<HelpScreen> {
       appBar: CustomAppBar(
         customerName: widget.customerName,
         customerId: widget.customerId,
+        showBackButton: true,
         onLogoTap: () {
           Navigator.of(context).popUntil((route) => route.isFirst);
         },
       ),
-      body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(),
-            )
-          : _errorMessage != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.error_outline, color: Colors.red, size: 48),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Error: $_errorMessage',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.red),
-                      ),
-                      const SizedBox(height: 24),
-                      ElevatedButton(
-                        onPressed: _loadHelpActions,
-                        child: const Text('Retry'),
-                      ),
-                    ],
-                  ),
-                )
-              : SingleChildScrollView(
+      body: SingleChildScrollView(
         child: Center(
           child: Container(
             constraints: const BoxConstraints(maxWidth: 1000), // Max width for web/desktop
@@ -217,37 +127,99 @@ class _HelpScreenState extends State<HelpScreen> {
                 ),
                 const SizedBox(height: AppTheme.spacing32),
 
-                // Help Actions Grid
-                _helpActions.isEmpty
-                    ? Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(AppTheme.spacing32),
-                          child: Text(
-                            'No help actions available',
-                            style: Theme.of(context).textTheme.bodyLarge,
-                          ),
-                        ),
-                      )
-                    : GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          crossAxisSpacing: AppTheme.spacing16,
-                          mainAxisSpacing: AppTheme.spacing16,
-                          childAspectRatio: 1.2,
-                        ),
-                        itemCount: _helpActions.length,
-                        itemBuilder: (context, index) {
-                          final action = _helpActions[index];
-                          return HelpCard(
-                            icon: _getIconForAction(action['type'] as String?),
-                            title: action['title'] as String? ?? 'Help',
-                            iconColor: _getColorForAction(action['type'] as String?),
-                            onTap: () => _onCardTap(action['title'] as String? ?? ''),
-                          );
-                        },
-                      ),
+                // Self-Service Section
+                HelpSection(
+                  title: 'Self-Service',
+                  cards: [
+                    HelpCard(
+                      icon: Icons.menu_book,
+                      title: 'FAQs / Help Center',
+                      iconColor: _blueIcon,
+                      onTap: () => _onCardTap('FAQs / Help Center'),
+                    ),
+                    HelpCard(
+                      icon: Icons.assignment,
+                      title: 'Policy Service Requests',
+                      iconColor: _blueIcon,
+                      onTap: () => _onCardTap('Policy Service Requests'),
+                    ),
+                    HelpCard(
+                      icon: Icons.description,
+                      title: 'Documents & Certificates',
+                      iconColor: _blueIcon,
+                      onTap: () => _onCardTap('Documents & Certificates'),
+                    ),
+                  ],
+                ),
+
+                // Claims Section
+                HelpSection(
+                  title: 'Claims',
+                  cards: [
+                    HelpCard(
+                      icon: Icons.fact_check,
+                      title: 'File a Claim',
+                      iconColor: _orangeIcon,
+                      onTap: () => _onCardTap('File a Claim'),
+                    ),
+                    HelpCard(
+                      icon: Icons.bar_chart,
+                      title: 'Track Claim Status',
+                      iconColor: _greenIcon,
+                      onTap: () => _onCardTap('Track Claim Status'),
+                    ),
+                    HelpCard(
+                      icon: Icons.medical_services,
+                      title: 'Claim Assistance',
+                      iconColor: _blueIcon,
+                      onTap: () => _onCardTap('Claim Assistance'),
+                    ),
+                  ],
+                ),
+
+                // Payments Section
+                HelpSection(
+                  title: 'Payments',
+                  cards: [
+                    HelpCard(
+                      icon: Icons.credit_card,
+                      title: 'Track Payments',
+                      iconColor: _greenIcon,
+                      onTap: () => _onCardTap('Track Payments'),
+                    ),
+                    HelpCard(
+                      icon: Icons.warning_amber_rounded,
+                      title: 'Billing & Payment Issues',
+                      iconColor: _orangeIcon,
+                      onTap: () => _onCardTap('Billing & Payment Issues'),
+                    ),
+                  ],
+                ),
+
+                // Support Section
+                HelpSection(
+                  title: 'Support',
+                  cards: [
+                    HelpCard(
+                      icon: Icons.chat,
+                      title: 'Chat With Us',
+                      iconColor: _blueIcon,
+                      onTap: () => _onCardTap('Chat With Us'),
+                    ),
+                    HelpCard(
+                      icon: Icons.confirmation_number,
+                      title: 'Raise Support Ticket',
+                      iconColor: _blueIcon,
+                      onTap: () => _onCardTap('Raise Support Ticket'),
+                    ),
+                    HelpCard(
+                      icon: Icons.star,
+                      title: 'Advisor Feedback',
+                      iconColor: _orangeIcon,
+                      onTap: () => _onCardTap('Advisor Feedback'),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),

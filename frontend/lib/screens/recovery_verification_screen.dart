@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import '../services/bff_api_service.dart';
 import '../theme/app_theme.dart';
 import 'recovery_otp_screen.dart';
 
@@ -21,50 +20,65 @@ class _RecoveryVerificationScreenState extends State<RecoveryVerificationScreen>
   final _contactController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
-  String? _errorMessage;
 
-  Future<void> _handleVerify() async {
+  void _handleVerify() {
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;
-        _errorMessage = null;
       });
 
-      try {
-        final response = await BffApiService.verifyRecoveryIdentity(
-          customerIdOrEmailOrMobile: widget.mode == RecoveryMode.forgotPassword
-              ? _customerIdController.text.trim()
-              : _contactController.text.trim(),
-          destination: _contactController.text.trim(),
-        );
-
-        if (!mounted) return;
-
-        if (response['verified'] == true) {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => RecoveryOtpScreen(
-                customerId: widget.mode == RecoveryMode.forgotPassword
-                    ? _customerIdController.text.trim()
-                    : '',
-                destination: _contactController.text.trim(),
-              ),
-            ),
-          );
-        } else {
-          setState(() {
-            _isLoading = false;
-            _errorMessage = response['message'] as String? ?? 'Verification failed';
-          });
-        }
-      } catch (e) {
+      Future.delayed(const Duration(seconds: 1), () {
         if (mounted) {
-          setState(() {
-            _isLoading = false;
-            _errorMessage = e.toString().replaceFirst('Exception: ', '');
-          });
+          final cleanId = _customerIdController.text.trim().toUpperCase();
+          final cleanContact = _contactController.text.trim().toLowerCase();
+
+          debugPrint('DEBUG: Mode: \\${widget.mode}');
+          debugPrint('DEBUG: Customer ID: "$cleanId" (len: \\${cleanId.length})');
+          debugPrint('DEBUG: Contact Info: "$cleanContact" (len: \\${cleanContact.length})');
+
+          if (widget.mode == RecoveryMode.forgotPassword) {
+            // Require both Customer ID and contact
+            if (cleanId == 'HDFC123' && (cleanContact == 'upamanyusuksham@gmail.com' || cleanContact == '9876543210')) {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => RecoveryOtpScreen(
+                    customerId: cleanId,
+                    destination: cleanContact,
+                  ),
+                ),
+              );
+            } else {
+              setState(() { _isLoading = false; });
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Invalid details. Please check your Customer ID and contact info.'),
+                  backgroundColor: AppTheme.primaryRed,
+                ),
+              );
+            }
+          } else {
+            // getCustomerId mode: only contact info required
+            if (cleanContact == 'upamanyusuksham@gmail.com' || cleanContact == '9876543210') {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => RecoveryOtpScreen(
+                    customerId: '', // Not known yet
+                    destination: cleanContact,
+                  ),
+                ),
+              );
+            } else {
+              setState(() { _isLoading = false; });
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Invalid details. Please check your contact info.'),
+                  backgroundColor: AppTheme.primaryRed,
+                ),
+              );
+            }
+          }
         }
-      }
+      });
     }
   }
 
@@ -205,21 +219,6 @@ class _RecoveryVerificationScreenState extends State<RecoveryVerificationScreen>
                         ),
                         
                         SizedBox(height: isUltraSmall ? 24 : AppTheme.spacing32),
-                        
-                        if (_errorMessage != null) ...[
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.red.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              _errorMessage!,
-                              style: const TextStyle(color: Colors.white, fontSize: 13),
-                            ),
-                          ),
-                          SizedBox(height: isUltraSmall ? 16 : AppTheme.spacing20),
-                        ],
                         
                         SizedBox(
                           width: double.infinity,

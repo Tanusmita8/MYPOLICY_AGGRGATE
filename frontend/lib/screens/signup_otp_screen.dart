@@ -1,18 +1,15 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../services/bff_api_service.dart';
 import '../theme/app_theme.dart';
 import 'create_password_screen.dart';
 
 class SignupOtpScreen extends StatefulWidget {
   final String mobileNumber;
-  final String customerId;
 
   const SignupOtpScreen({
     super.key,
     required this.mobileNumber,
-    required this.customerId,
   });
 
   @override
@@ -26,7 +23,6 @@ class _SignupOtpScreenState extends State<SignupOtpScreen> {
   int _timerSeconds = 30;
   Timer? _timer;
   bool _isLoading = false;
-  String? _errorMessage;
 
   @override
   void initState() {
@@ -62,45 +58,36 @@ class _SignupOtpScreenState extends State<SignupOtpScreen> {
     super.dispose();
   }
 
-  Future<void> _handleVerify() async {
+  void _handleVerify() {
     final otp = _controllers.map((c) => c.text).join();
     if (otp.length < 6) return;
 
     setState(() {
       _isLoading = true;
-      _errorMessage = null;
     });
 
-    try {
-      final response = await BffApiService.verifySignupOtp(
-        mobileNumber: widget.mobileNumber,
-        otp: otp,
-      );
-
-      if (!mounted) return;
-
-      if (response['verified'] == true) {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => CreatePasswordScreen(
-              customerId: widget.customerId,
-            ),
-          ),
-        );
-      } else {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = response['message'] as String? ?? 'Invalid OTP';
-        });
-      }
-    } catch (e) {
+    // Mock OTP verification (Correct code is 123456)
+    Future.delayed(const Duration(seconds: 1), () {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = e.toString().replaceFirst('Exception: ', '');
-        });
+        if (otp == '123456') {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => const CreatePasswordScreen(),
+            ),
+          );
+        } else {
+          setState(() {
+            _isLoading = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Invalid OTP. Please try again.'),
+              backgroundColor: AppTheme.primaryRed,
+            ),
+          );
+        }
       }
-    }
+    });
   }
 
   @override
@@ -185,22 +172,6 @@ class _SignupOtpScreenState extends State<SignupOtpScreen> {
                   ),
                   
                   const SizedBox(height: AppTheme.spacing32),
-                  
-                  if (_errorMessage != null) ...[
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppTheme.primaryRed),
-                      ),
-                      child: Text(
-                        _errorMessage!,
-                        style: const TextStyle(color: AppTheme.primaryRed, fontSize: 13),
-                      ),
-                    ),
-                    const SizedBox(height: AppTheme.spacing24),
-                  ],
                   
                   SizedBox(
                     width: double.infinity,

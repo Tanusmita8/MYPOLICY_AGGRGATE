@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../services/bff_api_service.dart';
 import '../theme/app_theme.dart';
 import 'signup_otp_screen.dart';
 
@@ -19,9 +18,7 @@ class _SignupScreenState extends State<SignupScreen> {
   final _dobController = TextEditingController();
   
   DateTime? _selectedDate;
-  bool _isEmailUnique = true;
-  bool _isLoading = false;
-  String? _errorMessage;
+  bool _isEmailUnique = true; // Mock uniqueness check
 
   @override
   void dispose() {
@@ -59,49 +56,24 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
-  Future<void> _handleContinue() async {
+  void _handleContinue() {
     if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isLoading = true;
-        _errorMessage = null;
-      });
-
-      try {
-        final response = await BffApiService.signup(
-          name: _nameController.text,
-          email: _emailController.text,
-          mobileNumber: _mobileController.text,
-          dob: DateFormat('yyyy-MM-dd').format(_selectedDate!),
-        );
-
-        if (!mounted) return;
-
-        if (response['customerId'] != null) {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => SignupOtpScreen(
-                mobileNumber: _mobileController.text,
-                customerId: response['customerId'] as String,
-              ),
-            ),
-          );
-        } else {
-          setState(() {
-            _isLoading = false;
-            _errorMessage = response['message'] as String? ?? 'Signup failed';
-          });
-        }
-      } catch (e) {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-            _errorMessage = e.toString().replaceFirst('Exception: ', '');
-            if (_errorMessage!.toLowerCase().contains('email')) {
-              _isEmailUnique = false;
-            }
-          });
-        }
+      // Mock unique email check
+      if (_emailController.text == 'already@exists.com') {
+        setState(() {
+          _isEmailUnique = false;
+        });
+        _formKey.currentState!.validate();
+        return;
       }
+
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => SignupOtpScreen(
+            mobileNumber: _mobileController.text,
+          ),
+        ),
+      );
     }
   }
 
@@ -199,28 +171,13 @@ class _SignupScreenState extends State<SignupScreen> {
                       ),
                     ),
                     
-                    if (_errorMessage != null) ...[
-                      const SizedBox(height: AppTheme.spacing16),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.red.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          _errorMessage!,
-                          style: const TextStyle(color: Colors.white, fontSize: 13),
-                        ),
-                      ),
-                    ],
-                    
                     const SizedBox(height: AppTheme.spacing32),
                     
                     SizedBox(
                       width: double.infinity,
                       height: 56,
                       child: ElevatedButton(
-                        onPressed: _isLoading ? null : _handleContinue,
+                        onPressed: _handleContinue,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.primaryRed,
                           foregroundColor: Colors.white,
@@ -228,19 +185,10 @@ class _SignupScreenState extends State<SignupScreen> {
                             borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
                           ),
                         ),
-                        child: _isLoading
-                            ? const SizedBox(
-                                height: 24,
-                                width: 24,
-                                child: CircularProgressIndicator(
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Text(
-                                'Continue',
-                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                              ),
+                        child: const Text(
+                          'Continue',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
                       ),
                     ),
                   ],
