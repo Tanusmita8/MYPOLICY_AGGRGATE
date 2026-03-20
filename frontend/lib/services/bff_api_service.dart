@@ -2,10 +2,8 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 /// API service for all backend BFF calls
-/// Base URL: http://localhost:8090/api/bff
-/// (or configured via environment)
 class BffApiService {
-  static const String baseUrl = 'http://localhost:8090/api/bff';
+  static const String baseUrl = 'http://mypolicy-alb-380823029.us-east-1.elb.amazonaws.com/api/bff';
   static const String frontendBaseUrl = '$baseUrl/frontend';
   static const String timeout = '30000'; // ms
 

@@ -5,33 +5,30 @@ spring:
   application:
     name: bff-service
 
-# Service URLs
 customer:
   service:
-    url: http://localhost:8081
+    url: http://mypolicy-alb-380823029.us-east-1.elb.amazonaws.com
 
 policy:
   service:
-    url: http://localhost:8085
+    url: http://mypolicy-alb-380823029.us-east-1.elb.amazonaws.com
 
-# Data Pipeline Service (Consolidated: Ingestion + Metadata + Processing + Matching)
 data-pipeline:
   service:
-    url: http://localhost:8082
+    url: http://mypolicy-alb-380823029.us-east-1.elb.amazonaws.com
 
 ingestion:
   service:
-    url: http://localhost:8082
+    url: http://mypolicy-alb-380823029.us-east-1.elb.amazonaws.com
 
 metadata:
   service:
-    url: http://localhost:8082
+    url: http://mypolicy-alb-380823029.us-east-1.elb.amazonaws.com
 
 processing:
   service:
-    url: http://localhost:8082
+    url: http://mypolicy-alb-380823029.us-east-1.elb.amazonaws.com
 
-# Feign Configuration
 feign:
   client:
     config:
@@ -39,7 +36,6 @@ feign:
         connectTimeout: 5000
         readTimeout: 5000
 
-# Logging
 logging:
   level:
     com.mypolicy.bff: DEBUG

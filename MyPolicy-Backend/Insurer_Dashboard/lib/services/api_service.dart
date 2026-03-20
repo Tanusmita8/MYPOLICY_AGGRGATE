@@ -3,12 +3,11 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  // Data Pipeline Service (direct) for insurer file uploads
-  // Change this to your deployed URL in production
-  static const String _dataPipelineBaseUrl = 'http://localhost:8082';
+  // Data Pipeline Service via ALB
+  static const String _dataPipelineBaseUrl = 'http://mypolicy-alb-380823029.us-east-1.elb.amazonaws.com';
 
-  // BFF Service for orchestrated API calls
-  static const String _bffBaseUrl = 'http://localhost:8090';
+  // BFF Service via ALB
+  static const String _bffBaseUrl = 'http://mypolicy-alb-380823029.us-east-1.elb.amazonaws.com';
 
   /// Maps UI dropdown labels to backend collection names
   static String mapDataTypeToCollection(String dataType) {
