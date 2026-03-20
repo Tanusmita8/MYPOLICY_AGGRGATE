@@ -1,191 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/policy_model.dart';
-import '../services/bff_api_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/custom_appbar.dart';
 
-class PolicyDetailScreen extends StatefulWidget {
-  final Policy? policy;
+class PolicyDetailScreen extends StatelessWidget {
+  final Policy policy;
   final String customerId;
   final String customerName;
-  final String? policyId;
 
   const PolicyDetailScreen({
     super.key,
-    this.policy,
+    required this.policy,
     required this.customerId,
     required this.customerName,
-    this.policyId,
   });
 
   @override
-  State<PolicyDetailScreen> createState() => _PolicyDetailScreenState();
-}
-
-class _PolicyDetailScreenState extends State<PolicyDetailScreen> {
-  bool _isLoading = false;
-  String? _errorMessage;
-  Policy? _loadedPolicy;
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.policy == null && widget.policyId != null) {
-      _loadPolicyDetail();
-    } else {
-      _loadedPolicy = widget.policy;
-    }
-  }
-
-  Future<void> _loadPolicyDetail() async {
-    try {
-      setState(() {
-        _isLoading = true;
-        _errorMessage = null;
-      });
-
-      final response = await BffApiService.getPolicyDetail(
-        customerId: widget.customerId,
-        policyId: widget.policyId!,
-      );
-
-      if (!mounted) return;
-
-      final policyData = response['policy'] as Map<String, dynamic>?;
-      if (policyData != null) {
-        _loadedPolicy = Policy(
-          id: policyData['policyId'] as String? ?? '',
-          name: policyData['policyNumber'] as String? ?? '',
-          policyId: policyData['policyId'] as String? ?? '',
-          description: policyData['type'] as String? ?? '',
-          expiryDate: DateTime.tryParse(policyData['endDate'] as String? ?? '') ?? DateTime.now(),
-          annualPremium: double.tryParse(policyData['annualPremium'].toString()) ?? 0.0,
-          sumInsured: double.tryParse(policyData['sumInsured'].toString()) ?? 0.0,
-          category: _mapCategory(policyData['type'] as String? ?? 'OTHER'),
-        );
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = e.toString().replaceFirst('Exception: ', '');
-        });
-      }
-    }
-  }
-
-  PolicyCategory _mapCategory(String type) {
-    switch (type.toUpperCase()) {
-      case 'AUTO':
-        return PolicyCategory.others;
-      case 'HEALTH':
-        return PolicyCategory.health;
-      case 'LIFE':
-        return PolicyCategory.life;
-      default:
-        return PolicyCategory.others;
-    }
-  }
-
-  PolicyStatus _mapStatus(String status) {
-    switch (status.toUpperCase()) {
-      case 'ACTIVE':
-        return PolicyStatus.active;
-      case 'DUE':
-        return PolicyStatus.due;
-      case 'EXPIRED':
-        return PolicyStatus.expired;
-      case 'EXPIRING_SOON':
-        return PolicyStatus.expiringsoon;
-      default:
-        return PolicyStatus.active;
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    // Show loading spinner while fetching policy
-    if (_isLoading) {
-      return Scaffold(
-        backgroundColor: AppTheme.backgroundGrey,
-        appBar: CustomAppBar(
-          customerName: widget.customerName,
-          customerId: widget.customerId,
-          onLogoTap: () => Navigator.of(context).pop(),
-        ),
-        body: const Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-
-    // Show error message if load failed
-    if (_errorMessage != null) {
-      return Scaffold(
-        backgroundColor: AppTheme.backgroundGrey,
-        appBar: CustomAppBar(
-          customerName: widget.customerName,
-          customerId: widget.customerId,
-          onLogoTap: () => Navigator.of(context).pop(),
-        ),
-        body: Center(
-          child: Container(
-            margin: const EdgeInsets.all(AppTheme.spacing24),
-            padding: const EdgeInsets.all(AppTheme.spacing20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
-              border: Border.all(color: Colors.red, width: 1),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.error_outline, color: Colors.red, size: 48),
-                const SizedBox(height: AppTheme.spacing16),
-                Text(
-                  'Failed to load policy',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: AppTheme.spacing12),
-                Text(
-                  _errorMessage ?? 'Unknown error occurred',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.red, fontSize: 14),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
-    // Show policy details if loaded successfully
-    final policy = _loadedPolicy ?? widget.policy;
-    if (policy == null) {
-      return Scaffold(
-        backgroundColor: AppTheme.backgroundGrey,
-        appBar: CustomAppBar(
-          customerName: widget.customerName,
-          customerId: widget.customerId,
-          onLogoTap: () => Navigator.of(context).pop(),
-        ),
-        body: Center(
-          child: Text('No policy data available'),
-        ),
-      );
-    }
-
     return Scaffold(
       backgroundColor: AppTheme.backgroundGrey,
       appBar: CustomAppBar(
-        customerName: widget.customerName,
-        customerId: widget.customerId,
+        customerName: customerName,
+        customerId: customerId,
+        showBackButton: true,
         onLogoTap: () => Navigator.of(context).pop(),
       ),
       body: SingleChildScrollView(
@@ -195,7 +33,7 @@ class _PolicyDetailScreenState extends State<PolicyDetailScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               
-              _buildSummaryHeader(context, policy),
+              _buildSummaryHeader(context),
               const SizedBox(height: AppTheme.spacing24),
               
               // Sections Grid for Web/Tablet, Column for Mobile
@@ -205,17 +43,17 @@ class _PolicyDetailScreenState extends State<PolicyDetailScreen> {
                     return Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(child: _buildPolicyOverview(context, policy)),
+                        Expanded(child: _buildPolicyOverview(context)),
                         const SizedBox(width: AppTheme.spacing24),
-                        Expanded(child: _buildCoverageDetails(context, policy)),
+                        Expanded(child: _buildCoverageDetails(context)),
                       ],
                     );
                   } else {
                     return Column(
                       children: [
-                        _buildPolicyOverview(context, policy),
+                        _buildPolicyOverview(context),
                         const SizedBox(height: AppTheme.spacing24),
-                        _buildCoverageDetails(context, policy),
+                        _buildCoverageDetails(context),
                       ],
                     );
                   }
@@ -229,7 +67,7 @@ class _PolicyDetailScreenState extends State<PolicyDetailScreen> {
     );
   }
 
-  Widget _buildSummaryHeader(BuildContext context, Policy policy) {
+  Widget _buildSummaryHeader(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isCompact = constraints.maxWidth < 650;
@@ -338,7 +176,7 @@ class _PolicyDetailScreenState extends State<PolicyDetailScreen> {
     );
   }
 
-  Widget _buildPolicyOverview(BuildContext context, Policy policy) {
+  Widget _buildPolicyOverview(BuildContext context) {
     return _buildDetailSection(
       context,
       title: 'Policy Overview',
@@ -355,7 +193,7 @@ class _PolicyDetailScreenState extends State<PolicyDetailScreen> {
     );
   }
 
-  Widget _buildCoverageDetails(BuildContext context, Policy policy) {
+  Widget _buildCoverageDetails(BuildContext context) {
     return _buildDetailSection(
       context,
       title: 'Coverage Details',

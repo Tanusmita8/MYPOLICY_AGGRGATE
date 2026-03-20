@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../theme/app_theme.dart';
-import '../services/bff_api_service.dart';
 import 'dashboard_screen.dart';
 import 'recovery_verification_screen.dart';
 import 'signup_screen.dart';
@@ -54,65 +53,32 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
-  void _handleLogin() async {
+  void _handleLogin() {
     final customerId = _customerIdController.text.trim();
     final password = _passwordController.text.trim();
-
-    if (customerId.isEmpty || password.isEmpty) {
-      setState(() {
-        _errorMessage = 'Please enter both Customer ID and Password';
-      });
-      return;
-    }
 
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
-    try {
-      // Call BFF login API
-      final response = await BffApiService.login(
-        customerId: customerId,
-        password: password,
-      );
-
-      if (!mounted) return;
-
-      // Extract token and customer data from response
-      final token = response['token'] as String?;
-      final customerData = response['customer'] as Map<String, dynamic>?;
-
-      if (token != null && customerData != null) {
-        final resolvedCustomerId = customerData['customerId']?.toString();
-        if (resolvedCustomerId == null || resolvedCustomerId.isEmpty) {
+    // Mock login delay
+    Future.delayed(const Duration(seconds: 1), () {
+      if (mounted) {
+        if (customerId == 'HDFC123' && password == 'HDFC1111') {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => DashboardScreen(customerId: customerId),
+            ),
+          );
+        } else {
           setState(() {
             _isLoading = false;
-            _errorMessage = 'Login succeeded but customer ID was missing in response.';
+            _errorMessage = 'Invalid Customer ID or Password';
           });
-          return;
         }
-        // Store token for future API calls (can implement secure storage later)
-        // For now, pass customer ID to DashboardScreen
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => DashboardScreen(customerId: resolvedCustomerId),
-          ),
-        );
-      } else {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = 'Invalid response from server';
-        });
       }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = e.toString().replaceFirst('Exception: ', '');
-        });
-      }
-    }
+    });
   }
 
   @override

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../models/policy_model.dart';
-import '../services/bff_api_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/custom_appbar.dart';
 import '../widgets/summary_card.dart';
@@ -21,117 +20,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   PolicyCategory _selectedCategory = PolicyCategory.all;
-  List<Policy> _allPolicies = [];
-  bool _isLoading = true;
-  String? _errorMessage;
-  String _customerName = '';
-
-  @override
-  void initState() {
-    super.initState();
-    _loadDashboardData();
-  }
-
-  Future<void> _loadDashboardData() async {
-    try {
-      setState(() {
-        _isLoading = true;
-        _errorMessage = null;
-      });
-
-      if (!RegExp(r'^\d+$').hasMatch(widget.customerId)) {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = 'Invalid customer ID received. Please login again.';
-        });
-        return;
-      }
-
-      final response = await BffApiService.getDashboard(
-        customerId: widget.customerId,
-      );
-
-      if (!mounted) return;
-
-      // Extract customer name and policies from response
-      final customer = response['customer'] as Map<String, dynamic>?;
-      final policies = response['policies'] as List<dynamic>?;
-
-      if (customer != null && policies != null) {
-        _customerName = customer['firstName'] as String? ?? customer['name'] as String? ?? 'User';
-        
-        // Convert API response to Policy objects
-        final List<Policy> loadedPolicies = [];
-        for (var policyData in policies) {
-          final policy = Policy(
-            id: policyData['id'] as String? ?? policyData['policyId'] as String? ?? '',
-            name: policyData['planName'] as String? ?? policyData['policyNumber'] as String? ?? 'Policy',
-            policyId: policyData['id'] as String? ?? policyData['policyId'] as String? ?? '',
-            description: policyData['policyType'] as String? ?? policyData['type'] as String? ?? '',
-            category: _mapCategory((policyData['policyType'] as String? ?? policyData['type'] as String? ?? 'OTHER')),
-            sumInsured: double.tryParse(policyData['sumInsured'].toString()) ?? 0.0,
-            annualPremium: double.tryParse((policyData['annualPremium'] ?? policyData['premiumAmount']).toString()) ?? 0.0,
-            expiryDate: DateTime.tryParse(policyData['endDate'] as String? ?? '') ?? DateTime.now(),
-          );
-          loadedPolicies.add(policy);
-        }
-
-        setState(() {
-          _allPolicies = loadedPolicies;
-          _isLoading = false;
-        });
-      } else {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = 'Failed to load dashboard data';
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = e.toString().replaceFirst('Exception: ', '');
-        });
-      }
-    }
-  }
-
-  PolicyCategory _mapCategory(String type) {
-    switch (type.toUpperCase()) {
-      case 'AUTO':
-        return PolicyCategory.others;
-      case 'HEALTH':
-        return PolicyCategory.health;
-      case 'LIFE':
-        return PolicyCategory.life;
-      default:
-        return PolicyCategory.others;
-    }
-  }
-
-  PolicyStatus _mapStatus(String status) {
-    switch (status.toUpperCase()) {
-      case 'ACTIVE':
-        return PolicyStatus.active;
-      case 'DUE':
-        return PolicyStatus.due;
-      case 'EXPIRED':
-        return PolicyStatus.expired;
-      case 'EXPIRING_SOON':
-        return PolicyStatus.expiringsoon;
-      default:
-        return PolicyStatus.active;
-    }
-  }
-
-  int _calculateDaysUntilExpiry(String endDateStr) {
-    try {
-      final endDate = DateTime.parse(endDateStr);
-      return endDate.difference(DateTime.now()).inDays;
-    } catch (e) {
-      return 0;
-    }
-  }
+  List<Policy> get _allPolicies => PolicyData.getSamplePolicies();
 
   List<Policy> get _filteredPolicies {
     List<Policy> filtered;
@@ -198,7 +87,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           backgroundColor: AppTheme.backgroundGrey,
 
           appBar: CustomAppBar(
-            customerName: _customerName,
+            customerName: 'Suresh Das',
             customerId: widget.customerId,
             onLogoTap: () {
               Navigator.of(context).pushAndRemoveUntil(
@@ -211,31 +100,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             },
           ),
 
-          body: _isLoading
-              ? const Center(
-                  child: CircularProgressIndicator(),
-                )
-              : _errorMessage != null
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.error_outline, color: Colors.red, size: 48),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Error: $_errorMessage',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(color: Colors.red),
-                          ),
-                          const SizedBox(height: 24),
-                          ElevatedButton(
-                            onPressed: _loadDashboardData,
-                            child: const Text('Retry'),
-                          ),
-                        ],
-                      ),
-                    )
-                  : SingleChildScrollView(
+          body: SingleChildScrollView(
             child: Padding(
               padding: EdgeInsets.all(isMobile ? AppTheme.spacing16 : AppTheme.spacing24),
               child: Column(
@@ -245,7 +110,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                   /// Welcome Text
                   Text(
-                    'Welcome back, $_customerName!',
+                    'Welcome back, Suresh Das!',
                     style: isMobile
                         ? Theme.of(context)
                             .textTheme

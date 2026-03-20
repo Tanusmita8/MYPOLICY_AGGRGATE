@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../services/bff_api_service.dart';
 import '../widgets/donut_chart.dart';
 import '../widgets/info_card.dart';
 import '../widgets/custom_appbar.dart';
@@ -7,8 +6,9 @@ import '../widgets/calculation_breakdown_sheet.dart';
 import '../models/policy_model.dart';
 import '../utils/dashboard_constants.dart';
 import 'dashboard_screen.dart';
+import 'insights_screen.dart';
 
-class AnalyticsDashboard extends StatefulWidget {
+class AnalyticsDashboard extends StatelessWidget {
   final String customerName;
   final String customerId;
 
@@ -19,52 +19,10 @@ class AnalyticsDashboard extends StatefulWidget {
   });
 
   @override
-  State<AnalyticsDashboard> createState() => _AnalyticsDashboardState();
-}
-
-class _AnalyticsDashboardState extends State<AnalyticsDashboard> {
-  bool _isLoading = true;
-  String? _errorMessage;
-  Map<String, dynamic> _analyticsData = {};
-
-  @override
-  void initState() {
-    super.initState();
-    _loadAnalytics();
-  }
-
-  Future<void> _loadAnalytics() async {
-    try {
-      setState(() {
-        _isLoading = true;
-        _errorMessage = null;
-      });
-
-      final response = await BffApiService.getAnalytics(
-        customerId: widget.customerId,
-      );
-
-      if (!mounted) return;
-
-      setState(() {
-        _analyticsData = response['analytics'] as Map<String, dynamic>? ?? {};
-        _isLoading = false;
-      });
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = e.toString().replaceFirst('Exception: ', '');
-        });
-      }
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
     final policies = PolicyData.getSamplePolicies();
     final totalPolicies = policies.length;
-    final expiringSoon = policies.where((p) => p.status == PolicyStatus.due || p.status == PolicyStatus.expiringsoon).length;
+    // final expiringSoon = policies.where((p) => p.status == PolicyStatus.due || p.status == PolicyStatus.expiringsoon).length;
 
     // Calculate total values based on unexpired policies
     final unexpiredPolicies = policies.where((p) => p.status != PolicyStatus.expired).toList();
@@ -78,42 +36,19 @@ class _AnalyticsDashboardState extends State<AnalyticsDashboard> {
     return Scaffold(
       backgroundColor: const Color(0xFFE9EDF3),
       appBar: CustomAppBar(
-        customerName: widget.customerName,
-        customerId: widget.customerId,
+        customerName: customerName,
+        customerId: customerId,
+        showBackButton: true,
         onLogoTap: () {
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(
-              builder: (context) => DashboardScreen(customerId: widget.customerId),
+              builder: (context) => DashboardScreen(customerId: customerId),
             ),
             (route) => false,
           );
         },
       ),
-      body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(),
-            )
-          : _errorMessage != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.error_outline, color: Colors.red, size: 48),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Error: $_errorMessage',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.red),
-                      ),
-                      const SizedBox(height: 24),
-                      ElevatedButton(
-                        onPressed: _loadAnalytics,
-                        child: const Text('Retry'),
-                      ),
-                    ],
-                  ),
-                )
-              : LayoutBuilder(
+      body: LayoutBuilder(
         builder: (context, constraints) {
           final width = constraints.maxWidth;
           final isMobile = width < 600;
@@ -266,6 +201,15 @@ class _AnalyticsDashboardState extends State<AnalyticsDashboard> {
                             title: "Risk Status",
                             value: DashboardConstants.getRiskStatus(),
                             subtitle: "see insights",
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => InsightsScreen(
+                                  customerName: customerName,
+                                  customerId: customerId,
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       ],
