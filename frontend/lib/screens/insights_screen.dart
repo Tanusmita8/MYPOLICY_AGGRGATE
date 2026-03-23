@@ -84,8 +84,14 @@ class InsightsScreen extends StatelessWidget {
   }
 
   Widget _buildOverallRiskCard() {
-    final riskStatus = DashboardConstants.getRiskStatus();
-    final riskColor = riskStatus == "HIGH" ? Colors.red.shade700 : (riskStatus == "MEDIUM" ? Colors.orange.shade700 : Colors.green.shade700);
+    final riskData = DashboardConstants.getDetailedRiskStatus();
+    final riskStatus = riskData["riskStatus"];
+    final averageGap = riskData["averageGap"];
+    
+    // Updated color logic for High Risk, Moderate Risk, Low Risk
+    final riskColor = riskStatus == "High Risk" 
+      ? Colors.red.shade700 
+      : (riskStatus == "Moderate Risk" ? Colors.orange.shade700 : Colors.green.shade700);
     
     return Container(
       width: double.infinity,
@@ -119,7 +125,7 @@ class InsightsScreen extends StatelessWidget {
                   border: Border.all(color: riskColor, width: 1),
                 ),
                 child: Text(
-                  riskStatus,
+                  riskStatus.toUpperCase(),
                   style: TextStyle(
                     color: riskColor,
                     fontWeight: FontWeight.bold,
@@ -130,13 +136,35 @@ class InsightsScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          Text(
-            "₹ ${_formatCurrency(DashboardConstants.totalGap)} Gap",
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                "₹ ${_formatCurrency(DashboardConstants.totalGap)} Gap",
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(width: 12),
+              if (riskStatus != "No Coverage")
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.white12,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    "$averageGap% Avg Gap",
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(height: 4),
           const Text(
